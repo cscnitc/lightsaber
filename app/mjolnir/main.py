@@ -12,6 +12,10 @@ from data.status import Status
 import providers.adk.main as adk
 import providers.genai.main as genai
 import providers.mock.main as mock
+try:
+    import providers.openai.main as openai_provider
+except ImportError:
+    openai_provider = None
 from utilities import upload
 from utilities.command import run_command
 from utilities.dashboard import generate_dashboard
@@ -196,6 +200,19 @@ def _run_orchestrator():
         )
     elif provider_name == "adk":
         vulnerabilities, status = adk.run_analysis(
+            model_name,
+            code_dir,
+            files_to_scan,
+            threat_model_context,
+            run_dir,
+            batch_size,
+            ingest_path=ingest_path,
+        )
+    elif provider_name == "openai":
+        if openai_provider is None:
+            logger.error("OpenAI provider not available. Install openai package.")
+            sys.exit(1)
+        vulnerabilities, status = openai_provider.run_analysis(
             model_name,
             code_dir,
             files_to_scan,
