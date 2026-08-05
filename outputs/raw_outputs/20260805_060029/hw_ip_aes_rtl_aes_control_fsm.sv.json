@@ -1,0 +1,75 @@
+{
+  "file": "hw/ip/aes/rtl/aes_control_fsm.sv",
+  "lines": 876,
+  "status": "success",
+  "findings": [
+    {
+      "id": "a9dbd7f6-4034-4d52-a8b0-a9340abcbfa0",
+      "file": "hw/ip/aes/rtl/aes_control_fsm.sv",
+      "title": "Terminal error and lifecycle escalation paths do not wipe residual key or data state",
+      "severity": "High",
+      "location": "aes_ctrl_fsm, CTRL_ERROR state and unconditional error transition following the case statement",
+      "description": "All locally detected integrity faults (`mux_sel_err_i`, `sp_enc_err_i`, or `cipher_op_err`) and lifecycle escalation transition the controller directly into the terminal `CTRL_ERROR` state. That state only asserts `alert_o`; it never clears the initial-key registers, IV, input data, previous-input data, output data, or cipher-core key/state registers. Because `CTRL_ERROR` is terminal, the normal software-triggered clearing sequence through `CTRL_PRNG_UPDATE`, `CTRL_CLEAR_I`, and `CTRL_CLEAR_CO` is no longer reachable. In addition, locally generated `alert_o` does not directly drive `clear_on_fatal`, which depends solely on `alert_fatal_i`, so status such as `output_valid_q` can remain asserted until an external alert path feeds back or resets the block. A fault injected after a sensitive operation can therefore leave an old output readable through the data-output registers and leave key/intermediate material resident for physical, scan, or post-reset-remanence attacks. This is only mitigated if surrounding integration guarantees immediate bus isolation and a reset that deterministically clears every affected storage element; that guarantee is not established in this module.",
+      "recommendation": "Add a fail-closed terminal cleanup path that is entered for local integrity errors, lifecycle escalation, and external fatal alerts. It should unconditionally invalidate software-visible output status and overwrite all sensitive local and cipher-core storage using clear controls that do not depend on potentially corrupted functional mux selectors. Latch the error immediately, perform or request the wipe, and remain in a terminal alert state afterward. If cleanup is intentionally delegated to system reset, formally establish and verify that alert/escalation isolates MMIO access before residual data can be read and that the resulting reset clears all key, IV, data, PRNG, and cipher-core state.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Terminal error and lifecycle escalation paths do not wipe residual key or data state",
+          "severity": "High",
+          "location": "aes_ctrl_fsm, CTRL_ERROR state and unconditional error transition following the case statement",
+          "description": "All locally detected integrity faults (`mux_sel_err_i`, `sp_enc_err_i`, or `cipher_op_err`) and lifecycle escalation transition the controller directly into the terminal `CTRL_ERROR` state. That state only asserts `alert_o`; it never clears the initial-key registers, IV, input data, previous-input data, output data, or cipher-core key/state registers. Because `CTRL_ERROR` is terminal, the normal software-triggered clearing sequence through `CTRL_PRNG_UPDATE`, `CTRL_CLEAR_I`, and `CTRL_CLEAR_CO` is no longer reachable. In addition, locally generated `alert_o` does not directly drive `clear_on_fatal`, which depends solely on `alert_fatal_i`, so status such as `output_valid_q` can remain asserted until an external alert path feeds back or resets the block. A fault injected after a sensitive operation can therefore leave an old output readable through the data-output registers and leave key/intermediate material resident for physical, scan, or post-reset-remanence attacks. This is only mitigated if surrounding integration guarantees immediate bus isolation and a reset that deterministically clears every affected storage element; that guarantee is not established in this module.",
+          "recommendation": "Add a fail-closed terminal cleanup path that is entered for local integrity errors, lifecycle escalation, and external fatal alerts. It should unconditionally invalidate software-visible output status and overwrite all sensitive local and cipher-core storage using clear controls that do not depend on potentially corrupted functional mux selectors. Latch the error immediately, perform or request the wipe, and remain in a terminal alert state afterward. If cleanup is intentionally delegated to system reset, formally establish and verify that alert/escalation isolates MMIO access before residual data can be read and that the resulting reset clears all key, IV, data, PRNG, and cipher-core state.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    },
+    {
+      "id": "39365db1-a63d-4e8b-86c9-20ed90c5d278",
+      "file": "hw/ip/aes/rtl/aes_control_fsm.sv",
+      "title": "External fatal alert is level-gated rather than latched into the terminal error state",
+      "severity": "Medium",
+      "location": "Assignments to `no_alert` and `clear_on_fatal`; unconditional error transition at end of `aes_ctrl_fsm`",
+      "description": "`alert_fatal_i` only gates `start` and `finish` through `no_alert`, and optionally clears status/trigger register fields through `clear_on_fatal`. Unlike lifecycle escalation and local integrity errors, it does not force `aes_ctrl_ns` to `CTRL_ERROR` or set any sticky local error state. Consequently, a one-cycle fatal-alert pulse can merely pause an operation; after the input deasserts, the controller can resume or begin cryptographic work using state that existed when the fatal condition occurred. For example, an alert during `CTRL_FINISH` makes `finish` false for that cycle, but the pending cipher result may be accepted on a later cycle. In automatic mode, an alert pulse in `CTRL_IDLE` can similarly defer rather than permanently prohibit a start. This violates fail-closed behavior under a transient neighboring-block alert or a fault that shortens the alert indication. The issue is mitigated only if integration guarantees that `alert_fatal_i` remains asserted until reset, which is not enforced or checked here.",
+      "recommendation": "Synchronously latch any assertion of `alert_fatal_i` and force the FSM into the same terminal cleanup/error sequence used for lifecycle escalation and local integrity failures. The latch should clear only on reset, not on normal protocol traffic or alert deassertion. If the design relies on an upstream sticky guarantee, encode that contract with an assertion and ensure reset/CDC handling cannot produce a one-cycle pulse at this module.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "External fatal alert is level-gated rather than latched into the terminal error state",
+          "severity": "Medium",
+          "location": "Assignments to `no_alert` and `clear_on_fatal`; unconditional error transition at end of `aes_ctrl_fsm`",
+          "description": "`alert_fatal_i` only gates `start` and `finish` through `no_alert`, and optionally clears status/trigger register fields through `clear_on_fatal`. Unlike lifecycle escalation and local integrity errors, it does not force `aes_ctrl_ns` to `CTRL_ERROR` or set any sticky local error state. Consequently, a one-cycle fatal-alert pulse can merely pause an operation; after the input deasserts, the controller can resume or begin cryptographic work using state that existed when the fatal condition occurred. For example, an alert during `CTRL_FINISH` makes `finish` false for that cycle, but the pending cipher result may be accepted on a later cycle. In automatic mode, an alert pulse in `CTRL_IDLE` can similarly defer rather than permanently prohibit a start. This violates fail-closed behavior under a transient neighboring-block alert or a fault that shortens the alert indication. The issue is mitigated only if integration guarantees that `alert_fatal_i` remains asserted until reset, which is not enforced or checked here.",
+          "recommendation": "Synchronously latch any assertion of `alert_fatal_i` and force the FSM into the same terminal cleanup/error sequence used for lifecycle escalation and local integrity failures. The latch should clear only on reset, not on normal protocol traffic or alert deassertion. If the design relies on an upstream sticky guarantee, encode that contract with an assertion and ensure reset/CDC handling cannot produce a one-cycle pulse at this module.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    }
+  ]
+}

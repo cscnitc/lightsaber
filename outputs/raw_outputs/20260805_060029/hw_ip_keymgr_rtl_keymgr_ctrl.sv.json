@@ -1,0 +1,75 @@
+{
+  "file": "hw/ip/keymgr/rtl/keymgr_ctrl.sv",
+  "lines": 912,
+  "status": "success",
+  "findings": [
+    {
+      "id": "bb8a0660-3f86-4691-908d-3bd49bd86fb5",
+      "file": "hw/ip/keymgr/rtl/keymgr_ctrl.sv",
+      "title": "Key state data register is never updated while ECC bits are updated",
+      "severity": "High",
+      "location": "SEC_CM: CTRL.KEY.INTEGRITY always_ff block updating key_state_q and key_state_ecc_q",
+      "description": "After reset, the sequential key-state block updates only key_state_ecc_q. There is no non-reset assignment of key_state_q <= key_state_d, so every synthesized key data register remains permanently zero. At the same time, key_state_ecc_q is encoded from key_state_d, which contains entropy, root-key, KMAC, or wipe updates. On the first nonzero update, the stored ECC therefore no longer corresponds to the permanently zero key data, causing ecc_errs and a fault-driven wipe. This deterministically prevents normal key-manager initialization and operation, violating availability. If the ECC fault response were independently faulted or masked, subsequent cryptographic operations would use zero or stale key data instead of the intended root-derived state, violating key integrity.",
+      "recommendation": "Assign key_state_q from key_state_d in the non-reset branch on every cycle, alongside generation of ECC from the same key_state_d value. Add assertions or formal checks that each accepted key update changes both the data and corresponding ECC atomically, and that decoding every stored data/ECC word after a fault-free update reports no error.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Key state data register is never updated while ECC bits are updated",
+          "severity": "High",
+          "location": "SEC_CM: CTRL.KEY.INTEGRITY always_ff block updating key_state_q and key_state_ecc_q",
+          "description": "After reset, the sequential key-state block updates only key_state_ecc_q. There is no non-reset assignment of key_state_q <= key_state_d, so every synthesized key data register remains permanently zero. At the same time, key_state_ecc_q is encoded from key_state_d, which contains entropy, root-key, KMAC, or wipe updates. On the first nonzero update, the stored ECC therefore no longer corresponds to the permanently zero key data, causing ecc_errs and a fault-driven wipe. This deterministically prevents normal key-manager initialization and operation, violating availability. If the ECC fault response were independently faulted or masked, subsequent cryptographic operations would use zero or stale key data instead of the intended root-derived state, violating key integrity.",
+          "recommendation": "Assign key_state_q from key_state_d in the non-reset branch on every cycle, alongside generation of ECC from the same key_state_d value. Add assertions or formal checks that each accepted key update changes both the data and corresponding ECC atomically, and that decoding every stored data/ECC word after a fault-free update reports no error.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    },
+    {
+      "id": "e95f5558-6599-4e5a-b820-594ef1838bf2",
+      "file": "hw/ip/keymgr/rtl/keymgr_ctrl.sv",
+      "title": "Idle and invalid-state output logic exposes key shares on the KMAC key bus",
+      "severity": "High",
+      "location": "always_comb block key_output_ctrl",
+      "description": "key_o.valid is deasserted when op_req is low, but key_o.key is not masked based on that validity. In Creator, OwnerInt, and Owner states, stage_sel_o remains a valid stage while idle, so the block continuously drives key_state_q[cdi_sel_o] onto key_o.key even when no operation is active. Because cdi_sel_o uses software-controlled op_cdi_sel_i outside an advance operation, software can select which CDI's shares remain present on the cross-block bus. The explicit StCtrlInvalid branch also drives key_state_q without entropy masking whenever the FSM is in the legal invalid encoding, defeating the intended fail-closed behavior if a physical fault forces that encoding before wiping completes. Although a conforming consumer should ignore the bus when valid is low, placing secret shares on otherwise unnecessary inter-module wiring increases exposure to physical probing, scan/debug mistakes, side-channel coupling, or a compromised neighboring block and violates the module's stated non-exposure invariant.",
+      "recommendation": "Drive key_o.key from key_state_q only while a legitimate operation requires a key and key_o.valid is asserted. In every idle, disabled, wipe, invalid, illegal-state, or invalid-stage condition, drive entropy-derived masking data or a securely randomized nonsecret value. Remove the StCtrlInvalid exception. Qualify cdi_sel_o similarly so software cannot select a persistent secret value on the bus while idle, and add assertions that key_o.valid is required whenever key_o.key can depend on key_state_q.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Idle and invalid-state output logic exposes key shares on the KMAC key bus",
+          "severity": "High",
+          "location": "always_comb block key_output_ctrl",
+          "description": "key_o.valid is deasserted when op_req is low, but key_o.key is not masked based on that validity. In Creator, OwnerInt, and Owner states, stage_sel_o remains a valid stage while idle, so the block continuously drives key_state_q[cdi_sel_o] onto key_o.key even when no operation is active. Because cdi_sel_o uses software-controlled op_cdi_sel_i outside an advance operation, software can select which CDI's shares remain present on the cross-block bus. The explicit StCtrlInvalid branch also drives key_state_q without entropy masking whenever the FSM is in the legal invalid encoding, defeating the intended fail-closed behavior if a physical fault forces that encoding before wiping completes. Although a conforming consumer should ignore the bus when valid is low, placing secret shares on otherwise unnecessary inter-module wiring increases exposure to physical probing, scan/debug mistakes, side-channel coupling, or a compromised neighboring block and violates the module's stated non-exposure invariant.",
+          "recommendation": "Drive key_o.key from key_state_q only while a legitimate operation requires a key and key_o.valid is asserted. In every idle, disabled, wipe, invalid, illegal-state, or invalid-stage condition, drive entropy-derived masking data or a securely randomized nonsecret value. Remove the StCtrlInvalid exception. Qualify cdi_sel_o similarly so software cannot select a persistent secret value on the bus while idle, and add assertions that key_o.valid is required whenever key_o.key can depend on key_state_q.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    }
+  ]
+}

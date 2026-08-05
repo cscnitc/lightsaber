@@ -1,0 +1,75 @@
+{
+  "file": "hw/ip/keymgr/rtl/keymgr_kmac_if.sv",
+  "lines": 401,
+  "status": "success",
+  "findings": [
+    {
+      "id": "e032fb23-52da-406f-84e4-fc783d90ab25",
+      "file": "hw/ip/keymgr/rtl/keymgr_kmac_if.sv",
+      "title": "Unexpected KMAC completion does not abort secret-data transmission",
+      "severity": "High",
+      "location": "StTx, StTxLast, kmac_done_err_d, and kmac_data_o.data generation",
+      "description": "An unexpected KMAC done indication is only latched into kmac_done_err_q through kmac_done_err_d. It does not transition the interface FSM to StError, deassert kmac_data_o.valid, or force decoy data. While the interface is in StTx or StTxLast, kmac_done_vld is low, so kmac_data_i.done causes kmac_done_error_o to latch, but the current and subsequent cycles can continue transmitting adv_data, id_data, or gen_data. The data mux only checks cmd_error_o, inputs_invalid_o, and fsm_error_o; it omits kmac_done_error_o. A faulted or misbehaving KMAC block can therefore complete early while the key manager continues presenting sensitive key material and intermediate inputs on the KMAC interface, violating the expected protocol and allowing operation to continue after a security-relevant integrity fault.",
+      "recommendation": "Treat an unexpected done indication as a terminal interface error: transition state_d to StError, force kmac_data_o.valid low, and force kmac_data_o.data to decoy data in the same cycle that kmac_data_i.done is observed outside StOpWait. Include the current unexpected-done condition, as well as kmac_done_err_q, in the data/valid gating so that the cycle detecting the fault cannot transmit real data. Ensure the parent key-manager error path prevents result use and performs any required cleanup.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Unexpected KMAC completion does not abort secret-data transmission",
+          "severity": "High",
+          "location": "StTx, StTxLast, kmac_done_err_d, and kmac_data_o.data generation",
+          "description": "An unexpected KMAC done indication is only latched into kmac_done_err_q through kmac_done_err_d. It does not transition the interface FSM to StError, deassert kmac_data_o.valid, or force decoy data. While the interface is in StTx or StTxLast, kmac_done_vld is low, so kmac_data_i.done causes kmac_done_error_o to latch, but the current and subsequent cycles can continue transmitting adv_data, id_data, or gen_data. The data mux only checks cmd_error_o, inputs_invalid_o, and fsm_error_o; it omits kmac_done_error_o. A faulted or misbehaving KMAC block can therefore complete early while the key manager continues presenting sensitive key material and intermediate inputs on the KMAC interface, violating the expected protocol and allowing operation to continue after a security-relevant integrity fault.",
+          "recommendation": "Treat an unexpected done indication as a terminal interface error: transition state_d to StError, force kmac_data_o.valid low, and force kmac_data_o.data to decoy data in the same cycle that kmac_data_i.done is observed outside StOpWait. Include the current unexpected-done condition, as well as kmac_done_err_q, in the data/valid gating so that the cycle detecting the fault cannot transmit real data. Ensure the parent key-manager error path prevents result use and performs any required cleanup.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    },
+    {
+      "id": "1ddd11fc-5dbb-4c6a-bcc8-e866da7edb69",
+      "file": "hw/ip/keymgr/rtl/keymgr_kmac_if.sv",
+      "title": "Command-consistency detection occurs after a potentially mismatched KMAC beat is accepted",
+      "severity": "Medium",
+      "location": "cmd_consty_err_d and kmac_data_o.data selection in StTx/StTxLast",
+      "description": "The interface detects changes to adv_en_i, id_en_i, or gen_en_i by latching cmd_consty_err_q, but the data mux uses the previously latched cmd_error_o value. If a control fault changes the command enables during StTx or StTxLast, kmac_data_o.data is selected using the new live enables on the same cycle that KMAC may assert ready. cmd_consty_err_q is updated only at the clock edge, so cmd_error_o is still clear during that transfer. Consequently, one full data beat from a command different from the command captured in enables_q can be accepted before the consistency error forces decoy data on later cycles. This undermines the stated command-consistency fault-injection mitigation and can cause KMAC to process attacker- or fault-selected key-manager inputs.",
+      "recommendation": "Use the captured command enables, rather than live adv_en_i/id_en_i/gen_en_i, for all data and strobe selection after cnt_set. Additionally, gate the current transfer with the same-cycle consistency condition, for example by forcing decoy data and suppressing valid whenever the active enables differ from enables_q. Abort the transaction and enter the terminal error state on a detected mismatch so no mismatched beat can be accepted.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Command-consistency detection occurs after a potentially mismatched KMAC beat is accepted",
+          "severity": "Medium",
+          "location": "cmd_consty_err_d and kmac_data_o.data selection in StTx/StTxLast",
+          "description": "The interface detects changes to adv_en_i, id_en_i, or gen_en_i by latching cmd_consty_err_q, but the data mux uses the previously latched cmd_error_o value. If a control fault changes the command enables during StTx or StTxLast, kmac_data_o.data is selected using the new live enables on the same cycle that KMAC may assert ready. cmd_consty_err_q is updated only at the clock edge, so cmd_error_o is still clear during that transfer. Consequently, one full data beat from a command different from the command captured in enables_q can be accepted before the consistency error forces decoy data on later cycles. This undermines the stated command-consistency fault-injection mitigation and can cause KMAC to process attacker- or fault-selected key-manager inputs.",
+          "recommendation": "Use the captured command enables, rather than live adv_en_i/id_en_i/gen_en_i, for all data and strobe selection after cnt_set. Additionally, gate the current transfer with the same-cycle consistency condition, for example by forcing decoy data and suppressing valid whenever the active enables differ from enables_q. Abort the transaction and enter the terminal error state on a detected mismatch so no mismatched beat can be accepted.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    }
+  ]
+}

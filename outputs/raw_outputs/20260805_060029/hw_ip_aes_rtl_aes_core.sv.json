@@ -1,0 +1,41 @@
+{
+  "file": "hw/ip/aes/rtl/aes_core.sv",
+  "lines": 994,
+  "status": "success",
+  "findings": [
+    {
+      "id": "195df76c-6c82-4790-9e29-4d3d570b1792",
+      "file": "hw/ip/aes/rtl/aes_core.sv",
+      "title": "Output data register lacks an unconditional reset wipe",
+      "severity": "High",
+      "location": "always_ff block data_out_reg",
+      "description": "The reset branch is conditional on both reset assertion and data_out_we not being SP2V_HIGH: `if (!rst_ni && data_out_we != SP2V_HIGH)`. If reset is asserted while an output write is active, the reset condition is false and the `else if` branch loads `data_out_d` instead of clearing `data_out_q`. This is synthesizable behavior and prevents `rst_ni` from acting as an unconditional reset for the software-readable output register. In particular, a short reset pulse occurring during the output-write cycle, or a reset applied while the clock is stopped before another clock edge can execute the clear branch, can leave or capture decrypted plaintext or other operation output across reset. The condition may also synthesize as reset gating, making the wipe sensitive to faults on the write-enable path. After reset release, a subsequent software context can read the retained value through `hw2reg.data_out`, violating cross-reset data isolation and the DATA_REG.SEC_WIPE invariant.",
+      "recommendation": "Make reset dominant and independent of all functional enables: use `if (!rst_ni) data_out_q <= '0; else if (data_out_we == SP2V_HIGH) data_out_q <= data_out_d;`. If randomized reset-time clearing is required, first perform an unconditional reset to a non-sensitive value and then run the PRNG-based clearing sequence after reset release. Add a property proving that assertion of `rst_ni == 0` clears `data_out_q` regardless of `data_out_we`, including reset assertion during an active output write and with no intervening clock edge.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Output data register lacks an unconditional reset wipe",
+          "severity": "High",
+          "location": "always_ff block data_out_reg",
+          "description": "The reset branch is conditional on both reset assertion and data_out_we not being SP2V_HIGH: `if (!rst_ni && data_out_we != SP2V_HIGH)`. If reset is asserted while an output write is active, the reset condition is false and the `else if` branch loads `data_out_d` instead of clearing `data_out_q`. This is synthesizable behavior and prevents `rst_ni` from acting as an unconditional reset for the software-readable output register. In particular, a short reset pulse occurring during the output-write cycle, or a reset applied while the clock is stopped before another clock edge can execute the clear branch, can leave or capture decrypted plaintext or other operation output across reset. The condition may also synthesize as reset gating, making the wipe sensitive to faults on the write-enable path. After reset release, a subsequent software context can read the retained value through `hw2reg.data_out`, violating cross-reset data isolation and the DATA_REG.SEC_WIPE invariant.",
+          "recommendation": "Make reset dominant and independent of all functional enables: use `if (!rst_ni) data_out_q <= '0; else if (data_out_we == SP2V_HIGH) data_out_q <= data_out_d;`. If randomized reset-time clearing is required, first perform an unconditional reset to a non-sensitive value and then run the PRNG-based clearing sequence after reset release. Add a property proving that assertion of `rst_ni == 0` clears `data_out_q` regardless of `data_out_we`, including reset assertion during an active output write and with no intervening clock edge.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    }
+  ]
+}

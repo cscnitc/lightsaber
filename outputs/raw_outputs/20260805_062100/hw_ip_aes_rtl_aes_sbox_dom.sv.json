@@ -1,0 +1,75 @@
+{
+  "file": "hw/ip/aes/rtl/aes_sbox_dom.sv",
+  "lines": 1077,
+  "status": "success",
+  "findings": [
+    {
+      "id": "58f2f715-546a-4109-87af-b3ce8d22b634",
+      "file": "hw/ip/aes/rtl/aes_sbox_dom.sv",
+      "title": "Dense, Unprotected Stage Counter Can Be Faulted to Skip S-Box Computation",
+      "severity": "Medium",
+      "location": "aes_sbox_dom: count_q/count_d, out_req_o, and we assignments",
+      "description": "The five-cycle security-critical sequencing is controlled by an ordinary 3-bit binary counter with no redundant encoding, sequence validation, or error indication. A single-bit fault can change count_q from 3'b000 directly to 3'b100, causing out_req_o to assert before any stage register is updated. Other single-bit transitions, such as 3'b001 to 3'b011, skip an internal inversion stage. Values 5 through 7 are also accepted as normal counter values and eventually wrap back to zero without raising an alert. Consequently, a clock, voltage, EM, or localized register fault can cause stale or partially computed masked outputs to be accepted as a completed S-Box result. When AES outputs are observable, repeatable stage-skipping faults can corrupt encryption or decryption and provide a differential-fault-analysis path to key recovery. The module exposes no error output through which the enclosing AES block could distinguish this condition from a valid completion.",
+      "recommendation": "Replace the binary counter with a hardened sparse-encoded FSM or redundant counters that validate the exact 0-to-4 stage sequence. Treat every invalid state, unexpected transition, or disagreement as a terminal error: suppress out_req_o, disable all stage write enables, clear sensitive intermediate registers, and propagate a fatal alert to the AES control block. Completion should only be generated after independently confirming that every required stage executed exactly once.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Dense, Unprotected Stage Counter Can Be Faulted to Skip S-Box Computation",
+          "severity": "Medium",
+          "location": "aes_sbox_dom: count_q/count_d, out_req_o, and we assignments",
+          "description": "The five-cycle security-critical sequencing is controlled by an ordinary 3-bit binary counter with no redundant encoding, sequence validation, or error indication. A single-bit fault can change count_q from 3'b000 directly to 3'b100, causing out_req_o to assert before any stage register is updated. Other single-bit transitions, such as 3'b001 to 3'b011, skip an internal inversion stage. Values 5 through 7 are also accepted as normal counter values and eventually wrap back to zero without raising an alert. Consequently, a clock, voltage, EM, or localized register fault can cause stale or partially computed masked outputs to be accepted as a completed S-Box result. When AES outputs are observable, repeatable stage-skipping faults can corrupt encryption or decryption and provide a differential-fault-analysis path to key recovery. The module exposes no error output through which the enclosing AES block could distinguish this condition from a valid completion.",
+          "recommendation": "Replace the binary counter with a hardened sparse-encoded FSM or redundant counters that validate the exact 0-to-4 stage sequence. Treat every invalid state, unexpected transition, or disagreement as a terminal error: suppress out_req_o, disable all stage write enables, clear sensitive intermediate registers, and propagate a fatal alert to the AES control block. Completion should only be generated after independently confirming that every required stage executed exactly once.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    },
+    {
+      "id": "1afc4324-90b1-4af5-8b1b-d539aeb9d6b0",
+      "file": "hw/ip/aes/rtl/aes_sbox_dom.sv",
+      "title": "Legal PipelineMul Configuration Disables Required First-Order Leakage Protection",
+      "severity": "Medium",
+      "location": "aes_sbox_dom parameter PipelineMul and gen_no_pipeline paths in aes_dom_indep_mul_gf2pn and aes_dom_dep_mul_gf2pn",
+      "description": "PipelineMul is a public synthesis parameter whose legal value 1'b0 selects unpipelined multiplier implementations. The selected branches explicitly integrate newly arriving inner-domain inputs with reshared or blinded cross-domain values retained from the previous evaluation. The source comments acknowledge that these transitions can cause SCA leakage. Because aes_sbox_dom is marked as implementing KEY.MASKING but contains no elaboration-time prohibition or security-status indication for this configuration, an integration can synthesize a functionally correct AES S-Box that does not preserve the claimed first-order DOM security at transaction boundaries. An attacker able to request repeated AES operations and measure power or EM emissions can exploit these old/new-value transitions to recover information correlated with sensitive AES state.",
+      "recommendation": "For production configurations claiming first-order masking, require PipelineMul == 1'b1 with an elaboration-time assertion or remove the insecure parameterization from aes_sbox_dom. If the unpipelined option must remain supported, add the registers needed to align all inner-domain, cross-domain, and blinded terms across transaction boundaries, then re-run glitch-aware probing-security verification on that exact synthesized configuration and synthesis-cell mapping.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Legal PipelineMul Configuration Disables Required First-Order Leakage Protection",
+          "severity": "Medium",
+          "location": "aes_sbox_dom parameter PipelineMul and gen_no_pipeline paths in aes_dom_indep_mul_gf2pn and aes_dom_dep_mul_gf2pn",
+          "description": "PipelineMul is a public synthesis parameter whose legal value 1'b0 selects unpipelined multiplier implementations. The selected branches explicitly integrate newly arriving inner-domain inputs with reshared or blinded cross-domain values retained from the previous evaluation. The source comments acknowledge that these transitions can cause SCA leakage. Because aes_sbox_dom is marked as implementing KEY.MASKING but contains no elaboration-time prohibition or security-status indication for this configuration, an integration can synthesize a functionally correct AES S-Box that does not preserve the claimed first-order DOM security at transaction boundaries. An attacker able to request repeated AES operations and measure power or EM emissions can exploit these old/new-value transitions to recover information correlated with sensitive AES state.",
+          "recommendation": "For production configurations claiming first-order masking, require PipelineMul == 1'b1 with an elaboration-time assertion or remove the insecure parameterization from aes_sbox_dom. If the unpipelined option must remain supported, add the registers needed to align all inner-domain, cross-domain, and blinded terms across transaction boundaries, then re-run glitch-aware probing-security verification on that exact synthesized configuration and synthesis-cell mapping.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    }
+  ]
+}

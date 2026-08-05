@@ -1,0 +1,109 @@
+{
+  "file": "hw/ip/aes/rtl/aes_sbox_dom.sv",
+  "lines": 1077,
+  "status": "success",
+  "findings": [
+    {
+      "id": "afc5d475-c5bd-42c5-a06d-1a7aa062b197",
+      "file": "hw/ip/aes/rtl/aes_sbox_dom.sv",
+      "title": "Single-bit counter fault can skip the complete S-Box evaluation and release stale output",
+      "severity": "High",
+      "location": "aes_sbox_dom: count_d/count_q, out_req_o, and we[3:0] control logic",
+      "description": "The five-cycle security operation is controlled by an unhardened 3-bit binary counter. A single-bit fault changing count_q from 3'b000 to 3'b100 while en_i is asserted immediately raises out_req_o without asserting any stage write enable. If out_ack_i is already high, the module accepts the transaction and resets the counter while data_o and mask_o still reflect reset state or intermediates retained from a previous evaluation. Other corrupted states, including 5 through 7, are not treated as errors and eventually wrap back into the valid sequence. No local error or alert is raised. This permits a physical clock, voltage, or electromagnetic fault to skip the nonlinear AES S-Box computation, corrupting an AES round in a controlled manner. Repeated observable faulty ciphertexts can support differential fault analysis and compromise key confidentiality, in addition to violating output integrity.",
+      "recommendation": "Use a hardened or redundant operation controller with sufficient-distance state encoding, explicit legal-transition checking, and a terminal error state that remains latched until reset. Qualify out_req_o on an independently tracked completion condition proving that all four stages executed in order. Propagate counter/state integrity failures to the AES fatal alert path and suppress output acceptance after any detected fault.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Single-bit counter fault can skip the complete S-Box evaluation and release stale output",
+          "severity": "High",
+          "location": "aes_sbox_dom: count_d/count_q, out_req_o, and we[3:0] control logic",
+          "description": "The five-cycle security operation is controlled by an unhardened 3-bit binary counter. A single-bit fault changing count_q from 3'b000 to 3'b100 while en_i is asserted immediately raises out_req_o without asserting any stage write enable. If out_ack_i is already high, the module accepts the transaction and resets the counter while data_o and mask_o still reflect reset state or intermediates retained from a previous evaluation. Other corrupted states, including 5 through 7, are not treated as errors and eventually wrap back into the valid sequence. No local error or alert is raised. This permits a physical clock, voltage, or electromagnetic fault to skip the nonlinear AES S-Box computation, corrupting an AES round in a controlled manner. Repeated observable faulty ciphertexts can support differential fault analysis and compromise key confidentiality, in addition to violating output integrity.",
+          "recommendation": "Use a hardened or redundant operation controller with sufficient-distance state encoding, explicit legal-transition checking, and a terminal error state that remains latched until reset. Qualify out_req_o on an independently tracked completion condition proving that all four stages executed in order. Propagate counter/state integrity failures to the AES fatal alert path and suppress output acceptance after any detected fault.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    },
+    {
+      "id": "962c73bf-84e8-41d1-9c64-c4c5ed7b9c76",
+      "file": "hw/ip/aes/rtl/aes_sbox_dom.sv",
+      "title": "Supported PipelineMul=0 configuration explicitly permits first-order side-channel leakage",
+      "severity": "Medium",
+      "location": "aes_sbox_dom parameter PipelineMul and Pipeline==0 branches in aes_dom_indep_mul_gf2pn/aes_dom_dep_mul_gf2pn",
+      "description": "PipelineMul is a public synthesis parameter and is not constrained to 1. When set to 0, the instantiated DOM multipliers select branches that combine newly arriving inner-domain or input terms with reshared terms retained from the preceding evaluation. The RTL comments explicitly identify this temporal misalignment as a source of SCA leakage. Because the module is marked as the KEY.MASKING countermeasure, allowing this parameter combination without an elaboration failure creates a concrete build-time security hazard: a legal synthesized configuration can violate the assumptions under which first-order probing security was verified and expose AES state or key-dependent leakage.",
+      "recommendation": "For security-qualified AES builds, remove the insecure configuration or add an elaboration assertion requiring PipelineMul == 1. If an unpipelined configuration must remain available, treat it as a separate implementation and obtain post-synthesis first-order leakage verification for the exact primitives, synthesis constraints, and netlist before permitting its use with secret keys.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Supported PipelineMul=0 configuration explicitly permits first-order side-channel leakage",
+          "severity": "Medium",
+          "location": "aes_sbox_dom parameter PipelineMul and Pipeline==0 branches in aes_dom_indep_mul_gf2pn/aes_dom_dep_mul_gf2pn",
+          "description": "PipelineMul is a public synthesis parameter and is not constrained to 1. When set to 0, the instantiated DOM multipliers select branches that combine newly arriving inner-domain or input terms with reshared terms retained from the preceding evaluation. The RTL comments explicitly identify this temporal misalignment as a source of SCA leakage. Because the module is marked as the KEY.MASKING countermeasure, allowing this parameter combination without an elaboration failure creates a concrete build-time security hazard: a legal synthesized configuration can violate the assumptions under which first-order probing security was verified and expose AES state or key-dependent leakage.",
+          "recommendation": "For security-qualified AES builds, remove the insecure configuration or add an elaboration assertion requiring PipelineMul == 1. If an unpipelined configuration must remain available, treat it as a separate implementation and obtain post-synthesis first-order leakage verification for the exact primitives, synthesis constraints, and netlist before permitting its use with secret keys.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    },
+    {
+      "id": "be705239-7281-4925-885d-906a66023575",
+      "file": "hw/ip/aes/rtl/aes_sbox_dom.sv",
+      "title": "Operation direction is neither latched nor fail-closed",
+      "severity": "Medium",
+      "location": "aes_sbox_dom: combinational basis conversions controlled by op_i",
+      "description": "The operation selector op_i is used directly both when interpreting the input and later when formatting the output, but it is not captured at transaction start. Consequently, a change or transient fault in op_i during the five-cycle evaluation can cause the input to be processed using one direction and the result to be transformed using another. In addition, any value other than CIPH_FWD or CIPH_INV deterministically falls through to the forward-operation behavior rather than being rejected. A fault in the direction control can therefore produce an accepted, malformed AES round result without an alert. If faulty ciphertexts are observable, this integrity fault may contribute to differential fault attacks against the AES key.",
+      "recommendation": "Capture a validated operation value when Stage 1 is accepted and use that registered value for all input and output transformations. Decode the enum with an explicit illegal/default path that suppresses completion, clears sensitive intermediates, and raises the appropriate AES integrity alert. Where fault resistance is required, protect the captured direction with redundant or sparse encoding and verify it again before asserting out_req_o.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Operation direction is neither latched nor fail-closed",
+          "severity": "Medium",
+          "location": "aes_sbox_dom: combinational basis conversions controlled by op_i",
+          "description": "The operation selector op_i is used directly both when interpreting the input and later when formatting the output, but it is not captured at transaction start. Consequently, a change or transient fault in op_i during the five-cycle evaluation can cause the input to be processed using one direction and the result to be transformed using another. In addition, any value other than CIPH_FWD or CIPH_INV deterministically falls through to the forward-operation behavior rather than being rejected. A fault in the direction control can therefore produce an accepted, malformed AES round result without an alert. If faulty ciphertexts are observable, this integrity fault may contribute to differential fault attacks against the AES key.",
+          "recommendation": "Capture a validated operation value when Stage 1 is accepted and use that registered value for all input and output transformations. Decode the enum with an explicit illegal/default path that suppresses completion, clears sensitive intermediates, and raises the appropriate AES integrity alert. Where fault resistance is required, protect the captured direction with redundant or sparse encoding and verify it again before asserting out_req_o.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    }
+  ]
+}

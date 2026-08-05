@@ -80,6 +80,35 @@ class DeepWikiContextStatus(str, Enum):
     not_applicable = "not-applicable"
 
 
+def _parse_sse_response(text: str) -> dict:
+    """Parse SSE response, merging all result events and filtering notifications.
+
+    DeepWiki sends progress notifications (method: notifications/message)
+    before the actual result. We skip those and only collect events with
+    a 'result' key, merging their content arrays.
+    """
+    result_events = []
+    for line in text.splitlines():
+        line = line.strip()
+        if line.startswith("data:"):
+            data_str = line[5:].strip()
+            try:
+                event = json.loads(data_str)
+                if "result" in event:
+                    result_events.append(event)
+            except json.JSONDecodeError:
+                continue
+    if not result_events:
+        return {}
+
+    merged = result_events[0]
+    if len(result_events) > 1:
+        for event in result_events[1:]:
+            extra = event.get("result", {}).get("content", [])
+            merged["result"]["content"].extend(extra)
+    return merged
+
+
 class DeepWikiClient:
     def __init__(self, repo_name: str, mcp_url: str = DEFAULT_MCP_URL):
         self.repo_name = repo_name
@@ -105,16 +134,33 @@ class DeepWikiClient:
                     "Content-Type": "application/json",
                     "Accept": "application/json, text/event-stream",
                 },
-                timeout=30.0,
+                timeout=120.0,
             )
             if response.status_code != 200:
                 logger.warning(f"DeepWiki HTTP {response.status_code}: {response.text[:200]}")
                 return f"DeepWiki unavailable (HTTP {response.status_code})"
-            data = response.json()
+
+            content_type = response.headers.get("content-type", "")
+            if "text/event-stream" in content_type or "event-stream" in content_type:
+                data = _parse_sse_response(response.text)
+            else:
+                try:
+                    data = response.json()
+                except Exception:
+                    logger.warning(f"DeepWiki non-JSON response: {response.text[:200]}")
+                    return f"DeepWiki unavailable (invalid response)"
+
             if "error" in data:
                 logger.warning(f"DeepWiki RPC error: {data['error']}")
                 return f"DeepWiki error: {data['error'].get('message', 'unknown')}"
-            return json.dumps(data.get("result", data))
+            result = data.get("result", data)
+            if isinstance(result, dict) and "content" in result:
+                parts = []
+                for item in result["content"]:
+                    if isinstance(item, dict) and item.get("type") == "text":
+                        parts.append(item["text"])
+                return "\n".join(parts)
+            return json.dumps(result)
         except httpx.TimeoutException:
             logger.warning("DeepWiki request timed out")
             return "DeepWiki unavailable (timeout)"

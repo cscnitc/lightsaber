@@ -1,0 +1,109 @@
+{
+  "file": "hw/ip/aes/rtl/aes_key_expand.sv",
+  "lines": 507,
+  "status": "success",
+  "findings": [
+    {
+      "id": "1fd340e8-99b7-4fbe-98e0-a0d92d303a89",
+      "file": "hw/ip/aes/rtl/aes_key_expand.sv",
+      "title": "Malformed or faulted cryptographic configuration is processed without a synthesized validity check",
+      "severity": "Medium",
+      "location": "rot_word_in_mux, rcon_usage, drive_regular, err_o assignment, and AesCiphOpValid/AesKeyLenValid assertions",
+      "description": "The module uses op_i and key_len_i directly to select key-schedule behavior, but their validity is checked only by assertions. These assertions normally do not implement protection in the synthesized design, and cfg_valid_i is otherwise unused. Illegal encodings take deterministic default branches that continue producing key_o and completing the S-Box handshake, while err_o only reports encoding errors on en_i and out_ack_i. A fault on configuration distribution, or malformed configuration reaching this block from software-controlled AES registers, can therefore select a fallback or inconsistent key schedule without raising an error. Faults that change one valid operation or key-length encoding into another valid encoding are likewise not detected locally. The resulting faulty round keys can corrupt cryptographic results and, if faulty ciphertexts are observable, may support differential fault analysis against the AES key.",
+      "recommendation": "Add synthesized, fail-closed validation for op_i and key_len_i when cfg_valid_i is asserted. Invalid values should suppress en/out_req and key-schedule state advancement, drive a safe result, and raise an error that is latched by the enclosing AES security controller. Consider buffering/checking these security-critical selectors with sparse-encoding or redundant comparison primitives, and ensure configuration is latched for the duration of an operation so it cannot change between validation and use.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Malformed or faulted cryptographic configuration is processed without a synthesized validity check",
+          "severity": "Medium",
+          "location": "rot_word_in_mux, rcon_usage, drive_regular, err_o assignment, and AesCiphOpValid/AesKeyLenValid assertions",
+          "description": "The module uses op_i and key_len_i directly to select key-schedule behavior, but their validity is checked only by assertions. These assertions normally do not implement protection in the synthesized design, and cfg_valid_i is otherwise unused. Illegal encodings take deterministic default branches that continue producing key_o and completing the S-Box handshake, while err_o only reports encoding errors on en_i and out_ack_i. A fault on configuration distribution, or malformed configuration reaching this block from software-controlled AES registers, can therefore select a fallback or inconsistent key schedule without raising an error. Faults that change one valid operation or key-length encoding into another valid encoding are likewise not detected locally. The resulting faulty round keys can corrupt cryptographic results and, if faulty ciphertexts are observable, may support differential fault analysis against the AES key.",
+          "recommendation": "Add synthesized, fail-closed validation for op_i and key_len_i when cfg_valid_i is asserted. Invalid values should suppress en/out_req and key-schedule state advancement, drive a safe result, and raise an error that is latched by the enclosing AES security controller. Consider buffering/checking these security-critical selectors with sparse-encoding or redundant comparison primitives, and ensure configuration is latched for the duration of an operation so it cannot change between validation and use.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    },
+    {
+      "id": "34277a67-1fef-499b-b3e2-155c2af990a6",
+      "file": "hw/ip/aes/rtl/aes_key_expand.sv",
+      "title": "AES-192 requests are silently accepted when AES-192 support is disabled",
+      "severity": "Medium",
+      "location": "get_rnd_type, rot_word_in_mux AES_192 branch, drive_regular AES_192 branch, and AesKeyLenValid assertion",
+      "description": "When AES192Enable is 0, key_len_i == AES_192 is still treated as valid by the AesKeyLenValid assertion and does not contribute to err_o. The AES-192 datapath branches then fall back to reused connections or half-rotation behavior rather than performing an AES-192 key expansion. The S-Boxes can still handshake and out_req_o can indicate completion, so the unsupported request is not rejected by this module. If an AES-192 selection can reach the block because of a software-visible configuration request, integration error, or fault changing key_len_i, the accelerator may complete with a nonstandard key schedule instead of failing closed. This can violate cryptographic result integrity and can expose faulty outputs useful for fault analysis.",
+      "recommendation": "When AES192Enable is 0, explicitly classify AES_192 as an illegal key length in synthesized logic. Block key expansion and completion, and propagate a fatal or recoverable configuration error as required by the AES security policy. Parameterize the assertion as well, so its accepted set matches the implemented hardware modes.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "AES-192 requests are silently accepted when AES-192 support is disabled",
+          "severity": "Medium",
+          "location": "get_rnd_type, rot_word_in_mux AES_192 branch, drive_regular AES_192 branch, and AesKeyLenValid assertion",
+          "description": "When AES192Enable is 0, key_len_i == AES_192 is still treated as valid by the AesKeyLenValid assertion and does not contribute to err_o. The AES-192 datapath branches then fall back to reused connections or half-rotation behavior rather than performing an AES-192 key expansion. The S-Boxes can still handshake and out_req_o can indicate completion, so the unsupported request is not rejected by this module. If an AES-192 selection can reach the block because of a software-visible configuration request, integration error, or fault changing key_len_i, the accelerator may complete with a nonstandard key schedule instead of failing closed. This can violate cryptographic result integrity and can expose faulty outputs useful for fault analysis.",
+          "recommendation": "When AES192Enable is 0, explicitly classify AES_192 as an illegal key length in synthesized logic. Block key expansion and completion, and propagate a fatal or recoverable configuration error as required by the AES security policy. Parameterize the assertion as well, so its accepted set matches the implemented hardware modes.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    },
+    {
+      "id": "3ebc172d-3981-41f9-983b-8bc75a0ab224",
+      "file": "hw/ip/aes/rtl/aes_key_expand.sv",
+      "title": "Masked S-Boxes can operate with stale masking randomness after clear or a missed PRD write",
+      "severity": "Medium",
+      "location": "prd_we generation and gen_prd_buffer.prd_reg",
+      "description": "With SecMasking enabled, prd_q is reset only by rst_ni. clear_i reinitializes Rcon but neither clears prd_q nor records that fresh PRD is required before the next S-Box activation. Except for the AES-256 round-zero special case, prd_q updates only when prd_we_i is asserted after the AES-192 inhibition logic. Consequently, suppressing or missing a required prd_we_i pulse\u2014for example through a single-cycle physical fault on the PRD-control path\u2014allows a subsequent en_i assertion to process new masked key data using randomness retained from an earlier operation or round. No freshness state is checked and err_o remains low. Reuse of DOM or remasking randomness across attacker-observable operations can violate the independence assumptions of the masked S-Box and enable differential side-channel analysis.",
+      "recommendation": "Track PRD freshness in synthesized state. Invalidate the buffered PRD on clear_i, abort, error, and operation boundaries; set it valid only on an accepted PRD update; and prevent S-Box enable or completion until fresh PRD is present. Raise and latch an error if processing is requested without fresh randomness. Harden or redundantly check the PRD write-control logic so a single missed pulse cannot silently cause randomness reuse. Do not merely overwrite prd_q with zero unless S-Box operation is also blocked until genuinely fresh PRD arrives.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Masked S-Boxes can operate with stale masking randomness after clear or a missed PRD write",
+          "severity": "Medium",
+          "location": "prd_we generation and gen_prd_buffer.prd_reg",
+          "description": "With SecMasking enabled, prd_q is reset only by rst_ni. clear_i reinitializes Rcon but neither clears prd_q nor records that fresh PRD is required before the next S-Box activation. Except for the AES-256 round-zero special case, prd_q updates only when prd_we_i is asserted after the AES-192 inhibition logic. Consequently, suppressing or missing a required prd_we_i pulse\u2014for example through a single-cycle physical fault on the PRD-control path\u2014allows a subsequent en_i assertion to process new masked key data using randomness retained from an earlier operation or round. No freshness state is checked and err_o remains low. Reuse of DOM or remasking randomness across attacker-observable operations can violate the independence assumptions of the masked S-Box and enable differential side-channel analysis.",
+          "recommendation": "Track PRD freshness in synthesized state. Invalidate the buffered PRD on clear_i, abort, error, and operation boundaries; set it valid only on an accepted PRD update; and prevent S-Box enable or completion until fresh PRD is present. Raise and latch an error if processing is requested without fresh randomness. Harden or redundantly check the PRD write-control logic so a single missed pulse cannot silently cause randomness reuse. Do not merely overwrite prd_q with zero unless S-Box operation is also blocked until genuinely fresh PRD arrives.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    }
+  ]
+}

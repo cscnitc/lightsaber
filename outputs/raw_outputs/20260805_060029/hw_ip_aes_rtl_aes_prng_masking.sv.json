@@ -1,0 +1,75 @@
+{
+  "file": "hw/ip/aes/rtl/aes_prng_masking.sv",
+  "lines": 150,
+  "status": "success",
+  "findings": [
+    {
+      "id": "810ef1c6-5b86-4be4-871e-7da6c659aba8",
+      "file": "hw/ip/aes/rtl/aes_prng_masking.sv",
+      "title": "Masking PRNG lockup error is discarded instead of triggering an alert or blocking AES operation",
+      "severity": "High",
+      "location": "u_prim_bivium err_o connection and unused_prng_err assignment",
+      "description": "The Bivium primitive asserts prng_err when its internal state becomes all zero, but this module routes that indication only to unused_prng_err. Consequently, a physical fault that corrupts the PRNG state is invisible to the AES control and alert infrastructure. Although strict lockup protection restores a default secret-netlist-constant state when SecAllowForcingMasks is disabled, AES consumers are not prevented from using output produced around the fault, and repeated induced lockups can repeatedly restart the generator from the same state. This can produce missing or correlated masking randomness across operations, weakening side-channel protection and potentially enabling key recovery. Repeated faults can also disrupt mask generation without producing a diagnosable fatal condition.",
+      "recommendation": "Propagate prng_err to the AES fatal alert/error path and latch the error until reset or completion of an authenticated secure recovery sequence. On detection, prevent further data_update_i consumption and AES processing, invalidate the current masks, and require a fresh entropy-backed reseed before operation resumes. Do not rely solely on automatic restoration to a fixed default state.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Masking PRNG lockup error is discarded instead of triggering an alert or blocking AES operation",
+          "severity": "High",
+          "location": "u_prim_bivium err_o connection and unused_prng_err assignment",
+          "description": "The Bivium primitive asserts prng_err when its internal state becomes all zero, but this module routes that indication only to unused_prng_err. Consequently, a physical fault that corrupts the PRNG state is invisible to the AES control and alert infrastructure. Although strict lockup protection restores a default secret-netlist-constant state when SecAllowForcingMasks is disabled, AES consumers are not prevented from using output produced around the fault, and repeated induced lockups can repeatedly restart the generator from the same state. This can produce missing or correlated masking randomness across operations, weakening side-channel protection and potentially enabling key recovery. Repeated faults can also disrupt mask generation without producing a diagnosable fatal condition.",
+          "recommendation": "Propagate prng_err to the AES fatal alert/error path and latch the error until reset or completion of an authenticated secure recovery sequence. On detection, prevent further data_update_i consumption and AES processing, invalidate the current masks, and require a fresh entropy-backed reseed before operation resumes. Do not rely solely on automatic restoration to a fixed default state.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    },
+    {
+      "id": "95a268b8-9972-4296-962c-41a4c790d805",
+      "file": "hw/ip/aes/rtl/aes_prng_masking.sv",
+      "title": "Production security depends on lint-only enforcement of insecure SCA configuration parameters",
+      "severity": "Medium",
+      "location": "SecAllowForcingMasks and SecSkipPRNGReseeding parameter handling",
+      "description": "The module contains two intentionally insecure test configurations, but their exclusion from production is enforced only through ASSERT_STATIC_LINT_ERROR. That check does not create synthesized protection. If SecAllowForcingMasks is overridden to 1, force_masks_i can permit the PRNG to remain in an all-zero state, producing constant masks and disabling the intended masking protection. If SecSkipPRNGReseeding is overridden to 1, entropy requests are suppressed and every reseed request is immediately acknowledged without collecting entropy, allowing deterministic mask streams to repeat after reset. A production synthesis flow that omits or waives lint can therefore generate security-degraded hardware without an RTL elaboration failure or runtime alert.",
+      "recommendation": "Enforce secure parameter values in the production top-level configuration and in an independently checked, signed build manifest. Add synthesis/elaboration-time production assertions or configuration checks that cannot be silently waived with ordinary lint waivers. Where feasible, compile the SCA-only behavior into a separate non-production module or target so that production RTL has no force-mask path and cannot acknowledge reseeds without obtaining entropy.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Production security depends on lint-only enforcement of insecure SCA configuration parameters",
+          "severity": "Medium",
+          "location": "SecAllowForcingMasks and SecSkipPRNGReseeding parameter handling",
+          "description": "The module contains two intentionally insecure test configurations, but their exclusion from production is enforced only through ASSERT_STATIC_LINT_ERROR. That check does not create synthesized protection. If SecAllowForcingMasks is overridden to 1, force_masks_i can permit the PRNG to remain in an all-zero state, producing constant masks and disabling the intended masking protection. If SecSkipPRNGReseeding is overridden to 1, entropy requests are suppressed and every reseed request is immediately acknowledged without collecting entropy, allowing deterministic mask streams to repeat after reset. A production synthesis flow that omits or waives lint can therefore generate security-degraded hardware without an RTL elaboration failure or runtime alert.",
+          "recommendation": "Enforce secure parameter values in the production top-level configuration and in an independently checked, signed build manifest. Add synthesis/elaboration-time production assertions or configuration checks that cannot be silently waived with ordinary lint waivers. Where feasible, compile the SCA-only behavior into a separate non-production module or target so that production RTL has no force-mask path and cannot acknowledge reseeds without obtaining entropy.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    }
+  ]
+}

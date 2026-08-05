@@ -1,0 +1,41 @@
+{
+  "file": "hw/ip/keymgr/rtl/keymgr.sv",
+  "lines": 808,
+  "status": "success",
+  "findings": [
+    {
+      "id": "20864eb5-94c7-4122-833c-02e23e3a31c1",
+      "file": "hw/ip/keymgr/rtl/keymgr.sv",
+      "title": "OTP seed-valid indicators are ignored when OTP replaces flash seeds",
+      "severity": "High",
+      "location": "Generate blocks gen_otp_creator_seed and gen_otp_owner_seed; adv_dvalid assignments for Creator and OwnerInt",
+      "description": "When UseOtpSeedsInsteadOfFlash is enabled, creator_seed and owner_seed are selected from otp_key_i, but otp_key_i.creator_seed_valid and otp_key_i.owner_seed_valid are deliberately consumed only by unused reduction-XOR signals. Consequently, neither validity indicator participates in adv_dvalid or another fail-closed decision. The selected seeds are accepted based only on the content checks performed by keymgr_input_checks. If OTP reports a seed as invalid because of an integrity/read failure, incomplete provisioning, or a physical fault, keymgr can still advance whenever the resulting seed value passes those content checks. This can derive subsequent device identities and output keys from stale, corrupted, or unprovisioned root material, violating root-key integrity and lifecycle policy. This behavior is present in synthesized logic and affects configurations that set UseOtpSeedsInsteadOfFlash.",
+      "recommendation": "When UseOtpSeedsInsteadOfFlash is enabled, gate creator_seed_vld and owner_seed_vld, or the corresponding adv_dvalid terms, with strict checks of otp_key_i.creator_seed_valid and otp_key_i.owner_seed_valid using the validity encoding defined by otp_ctrl_pkg. Treat invalid or malformed validity encodings as fatal integrity faults: prevent state advancement and key generation, wipe active key material, latch the terminal error, and request the fatal alert. Add assertions and fault-injection tests proving that each invalid validity encoding blocks advancement even when the seed contents themselves appear valid.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "OTP seed-valid indicators are ignored when OTP replaces flash seeds",
+          "severity": "High",
+          "location": "Generate blocks gen_otp_creator_seed and gen_otp_owner_seed; adv_dvalid assignments for Creator and OwnerInt",
+          "description": "When UseOtpSeedsInsteadOfFlash is enabled, creator_seed and owner_seed are selected from otp_key_i, but otp_key_i.creator_seed_valid and otp_key_i.owner_seed_valid are deliberately consumed only by unused reduction-XOR signals. Consequently, neither validity indicator participates in adv_dvalid or another fail-closed decision. The selected seeds are accepted based only on the content checks performed by keymgr_input_checks. If OTP reports a seed as invalid because of an integrity/read failure, incomplete provisioning, or a physical fault, keymgr can still advance whenever the resulting seed value passes those content checks. This can derive subsequent device identities and output keys from stale, corrupted, or unprovisioned root material, violating root-key integrity and lifecycle policy. This behavior is present in synthesized logic and affects configurations that set UseOtpSeedsInsteadOfFlash.",
+          "recommendation": "When UseOtpSeedsInsteadOfFlash is enabled, gate creator_seed_vld and owner_seed_vld, or the corresponding adv_dvalid terms, with strict checks of otp_key_i.creator_seed_valid and otp_key_i.owner_seed_valid using the validity encoding defined by otp_ctrl_pkg. Treat invalid or malformed validity encodings as fatal integrity faults: prevent state advancement and key generation, wipe active key material, latch the terminal error, and request the fatal alert. Add assertions and fault-injection tests proving that each invalid validity encoding blocks advancement even when the seed contents themselves appear valid.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    }
+  ]
+}

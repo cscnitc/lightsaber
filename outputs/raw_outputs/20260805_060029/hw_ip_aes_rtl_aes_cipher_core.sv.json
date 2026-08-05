@@ -1,0 +1,41 @@
+{
+  "file": "hw/ip/aes/rtl/aes_cipher_core.sv",
+  "lines": 933,
+  "status": "success",
+  "findings": [
+    {
+      "id": "2d6a65fd-e1d3-43fa-bb18-6a40fa407906",
+      "file": "hw/ip/aes/rtl/aes_cipher_core.sv",
+      "title": "Masking randomness reuse is not detected in synthesized hardware",
+      "severity": "Medium",
+      "location": "Masking PRNG update path (`prd_masking_upd`, `prd_sub_bytes_q`) and assertions `AesSecCmKeyMaskingPrdSubBytes` / `AesSecCmKeyMaskingInitialPrngUpdate*`",
+      "description": "When `SecMasking` is enabled, the security of SubBytes and key expansion depends on advancing the masking PRNG between nonlinear evaluations. The controller drives the single-rail `prd_masking_upd` signal without an update acknowledgment, freshness counter, or runtime error check. A precisely timed clock/voltage/EM fault that suppresses an asserted update can therefore leave `prd_masking`, `prd_sub_bytes_q`, and `prd_key_expand` unchanged for a subsequent evaluation. This condition is not included in `mux_sel_err` or `sp_enc_err_d` and consequently does not raise `alert_o` or force the controller into its terminal error state. Freshness is checked only by SVAs under `INC_ASSERT`, which are not synthesized. Reusing randomness across masked nonlinear evaluations violates the masking scheme's fresh-randomness assumption and can enable correlation or probing-assisted key recovery over repeated attacker-triggered operations.",
+      "recommendation": "Add a synthesized, fault-resistant PRNG update protocol. For example, have `aes_prng_masking` return a sparsely encoded update acknowledgment or freshness epoch and require the controller to verify that it advances before enabling SubBytes or key expansion. Latch any mismatch as a fatal error, inhibit `out_valid_o`, and securely clear state and key registers. Protect the update request and freshness state with sparse or redundant encoding rather than relying solely on the existing non-synthesized assertions.",
+      "verdict": null,
+      "justification": "Not explicitly reviewed.",
+      "attack_vector": "",
+      "poc": null,
+      "status": "Open",
+      "evidence_level": "E0",
+      "deepwiki_context_status": "not-applicable",
+      "deepwiki_verified": false,
+      "deepwiki_queries": [],
+      "history": [
+        {
+          "phase_id": "1",
+          "phase_name": "Source File Exploration",
+          "status": "Open",
+          "title": "Masking randomness reuse is not detected in synthesized hardware",
+          "severity": "Medium",
+          "location": "Masking PRNG update path (`prd_masking_upd`, `prd_sub_bytes_q`) and assertions `AesSecCmKeyMaskingPrdSubBytes` / `AesSecCmKeyMaskingInitialPrngUpdate*`",
+          "description": "When `SecMasking` is enabled, the security of SubBytes and key expansion depends on advancing the masking PRNG between nonlinear evaluations. The controller drives the single-rail `prd_masking_upd` signal without an update acknowledgment, freshness counter, or runtime error check. A precisely timed clock/voltage/EM fault that suppresses an asserted update can therefore leave `prd_masking`, `prd_sub_bytes_q`, and `prd_key_expand` unchanged for a subsequent evaluation. This condition is not included in `mux_sel_err` or `sp_enc_err_d` and consequently does not raise `alert_o` or force the controller into its terminal error state. Freshness is checked only by SVAs under `INC_ASSERT`, which are not synthesized. Reusing randomness across masked nonlinear evaluations violates the masking scheme's fresh-randomness assumption and can enable correlation or probing-assisted key recovery over repeated attacker-triggered operations.",
+          "recommendation": "Add a synthesized, fault-resistant PRNG update protocol. For example, have `aes_prng_masking` return a sparsely encoded update acknowledgment or freshness epoch and require the controller to verify that it advances before enabling SubBytes or key expansion. Latch any mismatch as a fatal error, inhibit `out_valid_o`, and securely clear state and key registers. Protect the update request and freshness state with sparse or redundant encoding rather than relying solely on the existing non-synthesized assertions.",
+          "verdict": null,
+          "justification": "Not explicitly reviewed.",
+          "attack_vector": "",
+          "poc": null
+        }
+      ]
+    }
+  ]
+}
