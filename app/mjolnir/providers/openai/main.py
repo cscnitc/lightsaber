@@ -16,7 +16,7 @@ from providers.openai.usage import dump_usage
 from utilities.logger import logger
 
 
-def phase_1_source_file_exploration(auditor, files, code_dir, batch_size):
+def phase_1_source_file_exploration(auditor, files, code_dir, batch_size, run_dir=None):
     all_vulnerabilities = []
     executor = ThreadPoolExecutor(max_workers=batch_size)
     futures = {}
@@ -34,18 +34,26 @@ def phase_1_source_file_exploration(auditor, files, code_dir, batch_size):
             pbar.set_description(f"Scanning {f_path}")
             try:
                 report = future.result()
+                new_vulns = []
                 for audit_finding in report.vulnerabilities:
                     vuln = auditor._to_vulnerability(audit_finding, f_path)
                     vuln.add(phase_id="1", phase_name="Source File Exploration", finding=audit_finding)
                     all_vulnerabilities.append(vuln)
+                    new_vulns.append(vuln)
+                titles = "; ".join(f"[{v.severity}] {v.title[:70]}" for v in new_vulns) or "no findings"
+                logger.info(f"DONE {f_path}: {len(new_vulns)} finding(s): {titles}")
+                if run_dir:
+                    _persist_partial(run_dir, all_vulnerabilities, len(files))
             except Exception as e:
-                logger.error(f"Scanning {f_path} failed ({type(e).__name__}): {e}. Skipping file.")
+                logger.error(f"Scanning {f_path} failed ({type(e).__name__}): {str(e)[:500]}. Skipping file.")
+                if run_dir:
+                    _persist_partial(run_dir, all_vulnerabilities, len(files))
     finally:
         executor.shutdown(wait=True)
     return all_vulnerabilities
 
 
-def phase_2_initial_review(reviewer, vulnerabilities, batch_size):
+def phase_2_initial_review(reviewer, vulnerabilities, batch_size, run_dir=None):
     logger.info("Pipeline: Adversarial Review.")
     open_vulns = [v for v in vulnerabilities if v.status == Status.OPEN]
     if not open_vulns:
@@ -71,15 +79,62 @@ def phase_2_initial_review(reviewer, vulnerabilities, batch_size):
                 review_finding = future.result()
                 orig_vuln.add(phase_id="2", phase_name="Initial Review", finding=review_finding)
                 reviewed_ids.add(orig_vuln.id)
+                logger.info(
+                    f"REVIEWED {orig_vuln.file} :: {orig_vuln.title[:60]} -> "
+                    f"{review_finding.verdict} ({review_finding.severity})"
+                )
+                if run_dir:
+                    _persist_partial(run_dir, vulnerabilities, None)
             except Exception as e:
-                logger.error(f"Review failed for {orig_vuln.title}: {e}.")
+                logger.error(f"Review failed for {orig_vuln.title}: {str(e)[:300]}.")
                 orig_vuln.add_skipped(phase_id="2", phase_name="Initial Review", justification=f"Review failed: {e}")
+                if run_dir:
+                    _persist_partial(run_dir, vulnerabilities, None)
         for vuln in open_vulns:
             if vuln.id not in reviewed_ids:
                 vuln.add_skipped(phase_id="2", phase_name="Initial Review", justification="Omitted by reviewer.")
     finally:
         reviewer_executor.shutdown(wait=True)
     return vulnerabilities
+
+
+def _persist_partial(run_dir, vulnerabilities, total_files=None):
+    """Write incremental results after every file/review so a run reports
+    as it goes and nothing is lost if the process dies mid-scan."""
+    import datetime
+
+    from providers.openai.usage import dump_usage
+
+    try:
+        run_path = Path(run_dir)
+        run_path.mkdir(parents=True, exist_ok=True)
+        with open(run_path / "findings_partial.jsonl", "a", encoding="utf-8") as f:
+            pass
+        with open(run_path / "vulnerabilities_partial.json", "w", encoding="utf-8") as f:
+            json.dump([v.model_dump() for v in vulnerabilities], f, indent=2)
+        try:
+            dump_usage(str(run_path))
+        except Exception:
+            pass
+        done_marker = run_path / ".progress_count"
+        try:
+            n = int(done_marker.read_text().strip()) + 1 if done_marker.exists() else 1
+        except Exception:
+            n = -1
+        try:
+            done_marker.write_text(str(n))
+        except Exception:
+            pass
+        progress = {
+            "files_completed": n,
+            "total_files": total_files,
+            "findings_so_far": len(vulnerabilities),
+            "updated_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        }
+        with open(run_path / "progress.json", "w", encoding="utf-8") as f:
+            json.dump(progress, f, indent=2)
+    except Exception as e:
+        logger.warning(f"[persist] partial write failed: {e}")
 
 
 def run_analysis(model, code_dir, files, threat_model_context, run_dir, batch_size, ingest_path=None):
@@ -99,8 +154,8 @@ def run_analysis(model, code_dir, files, threat_model_context, run_dir, batch_si
     adv_instruction = adv_instruction + threat_model_context
     reviewer = OpenAIAdversarialReviewerAgent(client, model, adv_instruction, code_dir=code_dir)
     reviewer._phase = "phase-2-review"
-    all_vulnerabilities = phase_1_source_file_exploration(auditor, files, code_dir, batch_size)
-    all_vulnerabilities = phase_2_initial_review(reviewer, all_vulnerabilities, batch_size)
+    all_vulnerabilities = phase_1_source_file_exploration(auditor, files, code_dir, batch_size, run_dir)
+    all_vulnerabilities = phase_2_initial_review(reviewer, all_vulnerabilities, batch_size, run_dir)
     logger.success("Analysis pipeline completed.")
     dump_usage(run_dir)
     return all_vulnerabilities, "Success"

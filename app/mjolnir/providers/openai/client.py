@@ -43,5 +43,20 @@ def get_client():
     if base_url:
         kwargs["base_url"] = base_url
     transport = _InjectHeadersTransport()
-    http_client = httpx.Client(transport=transport, timeout=httpx.Timeout(600.0, connect=10.0))
-    return OpenAI(max_retries=3, http_client=http_client, **kwargs)
+    try:
+        http_timeout = float(os.environ.get("MJOLNIR_HTTP_TIMEOUT", "300"))
+    except ValueError:
+        http_timeout = 300.0
+    try:
+        max_retries = int(os.environ.get("MJOLNIR_MAX_RETRIES", "2"))
+    except ValueError:
+        max_retries = 2
+    http_client = httpx.Client(
+        transport=transport, timeout=httpx.Timeout(http_timeout, connect=15.0)
+    )
+    logger.info(
+        f"OpenAI client: base_url={base_url or 'default'} "
+        f"http_timeout={http_timeout}s max_retries={max_retries} "
+        f"session={_SESSION_ID[:8]}"
+    )
+    return OpenAI(max_retries=max_retries, http_client=http_client, **kwargs)
