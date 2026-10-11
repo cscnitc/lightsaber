@@ -1,15 +1,23 @@
 """OpenAI-compatible API client."""
 import os
+import uuid
 
 import httpx
 from openai import OpenAI
 
 from utilities.logger import logger
 
+# Stable per-process session id. Gateways such as https://opencode.ai/zen/go/v1
+# require an x-opencode-session header to route requests efficiently; without it
+# they answer 400 MissingSessionID. Override with OPENAI_SESSION_ID when a
+# specific session must be reused.
+_SESSION_ID = os.environ.get("OPENAI_SESSION_ID") or str(uuid.uuid4())
+
 ROOCODE_HEADERS = {
     "user-agent": "RooCode/3.34.8",
     "x-title": "Roo Code",
     "http-referer": "https://github.com/RooVetGit/Roo-Cline",
+    "x-opencode-session": _SESSION_ID,
     "x-stainless-runtime-version": "v22.20.0",
     "x-stainless-runtime": "node",
     "x-stainless-arch": "x64",

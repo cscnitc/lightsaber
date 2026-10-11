@@ -1,6 +1,5 @@
 """OpenAI-compatible provider entry point."""
 import json
-import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
@@ -13,6 +12,7 @@ from data.vulnerability import Vulnerability
 from providers.openai.agents.adversarial_reviewer import OpenAIAdversarialReviewerAgent
 from providers.openai.agents.auditor import OpenAIAuditorAgent
 from providers.openai.client import get_client
+from providers.openai.usage import dump_usage
 from utilities.logger import logger
 
 
@@ -39,9 +39,7 @@ def phase_1_source_file_exploration(auditor, files, code_dir, batch_size):
                     vuln.add(phase_id="1", phase_name="Source File Exploration", finding=audit_finding)
                     all_vulnerabilities.append(vuln)
             except Exception as e:
-                logger.error(f"Scanning {f_path} failed: {e}.")
-                executor.shutdown(wait=False, cancel_futures=True)
-                sys.exit(1)
+                logger.error(f"Scanning {f_path} failed ({type(e).__name__}): {e}. Skipping file.")
     finally:
         executor.shutdown(wait=True)
     return all_vulnerabilities
@@ -91,6 +89,7 @@ def run_analysis(model, code_dir, files, threat_model_context, run_dir, batch_si
     if not client:
         raise ValueError("OPENAI_API_KEY not set.")
     auditor = OpenAIAuditorAgent(client, model, threat_model_context)
+    auditor._phase = "phase-1-audit"
     current_dir = Path(__file__).resolve().parent
     adv_prompt_path = current_dir.parent / "genai" / "prompts" / "adversarial_reviewer.md"
     adv_instruction = "Verify and filter the listed codebase vulnerability findings."
@@ -99,7 +98,9 @@ def run_analysis(model, code_dir, files, threat_model_context, run_dir, batch_si
             adv_instruction = f.read().strip()
     adv_instruction = adv_instruction + threat_model_context
     reviewer = OpenAIAdversarialReviewerAgent(client, model, adv_instruction, code_dir=code_dir)
+    reviewer._phase = "phase-2-review"
     all_vulnerabilities = phase_1_source_file_exploration(auditor, files, code_dir, batch_size)
     all_vulnerabilities = phase_2_initial_review(reviewer, all_vulnerabilities, batch_size)
     logger.success("Analysis pipeline completed.")
+    dump_usage(run_dir)
     return all_vulnerabilities, "Success"

@@ -8,7 +8,7 @@ before the orchestrator forces a final answer.
 from pathlib import Path
 
 from data.security_report import SecurityReport
-from providers.openai.agents.base import OpenAIMjolnirAgent
+from providers.openai.agents.base import OpenAIMjolnirAgent, parse_schema_json
 from providers.openai.agents.doubt_loop import run_with_doubts
 from utilities.logger import logger
 
@@ -87,7 +87,7 @@ class OpenAIAuditorAgent(OpenAIMjolnirAgent):
         else:
             output = _gen(messages, response_schema=SecurityReport)
 
-        return SecurityReport.model_validate_json(output)
+        return parse_schema_json(output, SecurityReport)
 
     @staticmethod
     def _to_vulnerability(finding, file_path: str):
