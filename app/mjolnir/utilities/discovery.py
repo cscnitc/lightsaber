@@ -16,6 +16,23 @@ def discover_source_files(code_dir: str, job) -> list:
     code_path = Path(code_dir).resolve()
     files_to_scan = []
 
+    # Explicit file list (used for curated shortlists): relative repo paths,
+    # verified against the checkout; missing entries are logged and skipped.
+    explicit = job.get("files")
+    if explicit:
+        for rel in explicit:
+            cand = (code_path / rel).resolve()
+            try:
+                rel_norm = str(cand.relative_to(code_path))
+            except ValueError:
+                rel_norm = rel
+            if cand.is_file():
+                files_to_scan.append(rel_norm)
+            else:
+                from utilities.logger import logger as _lg
+                _lg.warning(f"[discovery] shortlist entry missing, skipping: {rel}")
+        return files_to_scan
+
     for s_dir in src_dirs:
         scan_path = (code_path / s_dir).resolve()
         if not scan_path.exists():
