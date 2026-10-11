@@ -396,6 +396,26 @@ class OpenAIMjolnirAgent:
         if hasattr(response, "choices") and response.choices:
             msg = response.choices[0].message
             content = getattr(msg, "content", None)
+            if isinstance(content, list):
+                # Some gateways (e.g. opencode zen) return structured content
+                # parts: [{'type': 'text', 'text': ...}, {'type': 'thinking', ...}].
+                # Keep human-visible text, drop thinking blocks.
+                texts = []
+                for part in content:
+                    if isinstance(part, str):
+                        texts.append(part)
+                    elif isinstance(part, dict):
+                        if part.get("type") == "text" and part.get("text"):
+                            texts.append(part["text"])
+                    else:
+                        try:
+                            t = getattr(part, "text", None)
+                            ptype = getattr(part, "type", "text")
+                            if t and ptype == "text":
+                                texts.append(t)
+                        except Exception:
+                            pass
+                content = "".join(texts)
             if content:
                 return content
             # Reasoning-distilled models may place output outside content.
