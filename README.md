@@ -1,15 +1,15 @@
 <!-- Licensed under the Apache-2.0 license -->
 <!-- SPDX-License-Identifier: Apache-2.0 -->
 
-# Mjolnir
+# Lightsaber
 
-Mjolnir is an AI-driven security auditing framework designed for open-source Root-of-Trust (RoT) projects.
+Lightsaber is an AI-driven security auditing framework designed for open-source Root-of-Trust (RoT) projects.
 
 It leverages AI foundation models and adversarial review pipelines to provide continuous security assurance through periodic, incremental scanning of firmware and RTL.
 
 ## Pipeline Architecture
 
-Mjolnir separates the declarative configuration and environment definition (Nix) from the imperative analysis execution (Python application engine).
+Lightsaber separates the declarative configuration and environment definition (Nix) from the imperative analysis execution (Python application engine).
 
 ```mermaid
 graph TD
@@ -73,7 +73,7 @@ All project definitions, job configurations, and nix setups are located under [p
 
 ## Getting Started
 
-Mjolnir requires Nix with flakes enabled.
+Lightsaber requires Nix with flakes enabled.
 
 ### Running an Audit
 
@@ -114,7 +114,7 @@ nix run .#gen-dashboard -- --output-dir /path/to/custom/runs
 
 ## Authentication
 
-Mjolnir supports both Google Cloud Vertex AI and the Gemini Developer API.
+Lightsaber supports both Google Cloud Vertex AI and the Gemini Developer API.
 
 ### Gemini API Key (Gemini Developer API)
 
@@ -138,7 +138,7 @@ export GOOGLE_CLOUD_LOCATION="global"
 
 ## Testing
 
-Mjolnir includes a suite of test targets to verify local pipelines, GCS uploads, and live LLM integration.
+Lightsaber includes a suite of test targets to verify local pipelines, GCS uploads, and live LLM integration.
 
 ### Verification of Nix Infrastructure (Mocks)
 
